@@ -720,15 +720,15 @@ class PaperList {
     private function _list_columns() {
         switch ($this->_report_id) {
         case "a":
-            return "id title revstat statusfull authors collab abstract topics reviewers shepherd scores formulas";
+            return "+id +title +revstat +statusfull authors collab abstract topics reviewers shepherd scores formulas";
         case "authorHome":
-            return "id title statusfull";
+            return "+id +title +statusfull";
         case "act":
         case "all":
-            return "sel id title revtype revstat statusfull authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
+            return "+sel +id +title +revtype +revstat +statusfull authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
         case "reviewerHome":
             $this->_default_linkto("finishreview");
-            return "id title revtype status";
+            return "+id +title +revtype +status";
         case "ar":
         case "r":
         case "rable":
@@ -739,29 +739,29 @@ class PaperList {
         case "manager":
         case "s":
         case "vis":
-            return "sel id title revtype revstat status authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
+            return "+sel +id +title +revtype +revstat +status authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
         case "req":
         case "rout":
             $this->_default_linkto("review");
-            return "sel id title revtype revstat status authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
+            return "+sel +id +title +revtype +revstat +status authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
         case "reqrevs":
             $this->_default_linkto("review");
-            return "id title revdelegation revstat status authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
+            return "+id +title +revdelegation +revstat +status authors collab abstract topics pcconflicts allpref reviewers tags tagreports lead shepherd scores formulas";
         case "reviewAssignment":
             $this->_default_linkto("assign");
-            return "id title revpref topicscore desirability assrev authors potentialconflict topics allrevtopicpref reviewers tags scores formulas";
+            return "+id +title +pref +topicscore +desirability +assignment authors +potentialconflict topics allrevtopicpref reviewers tags scores formulas";
         case "conflictassign":
             $this->_default_linkto("assign");
-            return "id title abstract authors potentialconflict revtype editconf tags";
+            return "+id +title abstract authors +potentialconflict +revtype +editconf tags";
         case "editpref":
             $this->_default_linkto("paper");
-            return "sel id title topicscore revtype editpref authors abstract topics";
+            return "+sel +id +title +topicscore +revtype +editpref authors abstract topics";
         case "reviewers":
             $this->_default_linkto("assign");
-            return "selon id title status";
+            return "+selon +id +title +status";
         case "reviewersSel":
             $this->_default_linkto("assign");
-            return "sel id title status reviewers";
+            return "+sel +id +title +status reviewers";
         case "empty":
             return "";
         default:
@@ -775,6 +775,10 @@ class PaperList {
             $fields = explode(" ", $fields);
         $field_list = array();
         foreach ($fields as $fid) {
+            if (str_starts_with($fid, "+")) {
+                $fid = substr($fid, 1);
+                $this->set_view($fid, true);
+            }
             foreach ($this->find_columns($fid) as $fdef)
                 $field_list[] = $fdef;
         }
