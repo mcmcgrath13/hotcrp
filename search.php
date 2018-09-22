@@ -54,11 +54,11 @@ if ($Qreq->fn) {
 
 // set fields to view
 if ($Qreq->redisplay) {
-    $pld = " ";
+    $pld = [];
     foreach ($Qreq as $k => $v)
-        if (substr($k, 0, 4) == "show" && $v)
-            $pld .= substr($k, 4) . " ";
-    $Conf->save_session("pldisplay", $pld);
+        if ($v && preg_match('{\A(show|hide|sort):?(.+)\z}', $k, $m))
+            $pld[] = $m[1] . ":" . $m[2];
+    $Conf->save_session("pldisplay", join(" ", $pld));
 }
 if ($Qreq->scoresort)
     $Qreq->scoresort = ListSorter::canonical_short_score_sort($Qreq->scoresort);
@@ -71,10 +71,10 @@ if ($Qreq->scoresort)
 if (!$Conf->session("scoresort"))
     $Conf->save_session("scoresort", ListSorter::default_score_sort($Conf));
 if ($Qreq->redisplay) {
-    if (isset($Qreq->forceShow) && !$Qreq->forceShow && $Qreq->showforce)
+    if (isset($Qreq->forceShow) && !$Qreq->forceShow && $Qreq["show:force"])
         $forceShow = 0;
     else
-        $forceShow = $Qreq->forceShow || $Qreq->showforce ? 1 : null;
+        $forceShow = $Qreq->forceShow || $Qreq["show:force"] ? 1 : null;
     SelfHref::redirect($Qreq, ["anchor" => "view", "forceShow" => $forceShow]);
 }
 
@@ -195,9 +195,11 @@ class Search_DisplayOptions {
             $x .= ' style="padding-left:2em"';
         unset($options["indent"]);
         $options["class"] = "dispopt-checkctrl paperlist-display";
-        $x .= '><span class="dispopt-check">'
-            . Ht::checkbox("show$type", 1, !$pl->is_folded($type), $options)
-            . '&nbsp;</span>' . Ht::label($title) . '</div>';
+        if (!isset($options["id"]))
+            $options["id"] = false;
+        $x .= '><label><span class="dispopt-check">'
+            . Ht::checkbox("show:$type", 1, !$pl->is_folded($type), $options)
+            . '&nbsp;</span>' . $title . '</label></div>';
         $this->item($column, $x);
     }
 }
@@ -223,12 +225,12 @@ if ($pl_text) {
         $display_options->checkbox_item(1, "au", "Authors", ["id" => "showau"]);
         if ($Me->privChair && $viewAllAuthors)
             $display_options_extra .=
-                Ht::checkbox("showanonau", 1, !$pl->is_folded("au"),
+                Ht::checkbox("show:anonau", 1, !$pl->is_folded("au"),
                              ["id" => "showau_hidden", "class" => "paperlist-display hidden"]);
     } else if ($Me->privChair && $Conf->subBlindAlways()) {
         $display_options->checkbox_item(1, "anonau", "Authors (deblinded)", ["id" => "showau", "disabled" => !$pl->has("anonau")]);
         $display_options_extra .=
-            Ht::checkbox("showau", 1, !$pl->is_folded("anonau"),
+            Ht::checkbox("show:au", 1, !$pl->is_folded("anonau"),
                          ["id" => "showau_hidden", "class" => "paperlist-display hidden"]);
     }
     if (!$Conf->subBlindAlways() || $viewAcceptedAuthors || $viewAllAuthors || $Me->privChair)
@@ -468,10 +470,10 @@ if ($pl->count > 0) {
 
     // Conflict display
     if ($Me->privChair)
-        echo "<td class='padlb'>",
-            Ht::checkbox("showforce", 1, !!$Qreq->forceShow,
+        echo "<td class='padlb'><label>",
+            Ht::checkbox("show:force", 1, !!$Qreq->forceShow,
                          ["id" => "showforce", "class" => "paperlist-display"]),
-            "&nbsp;", Ht::label("Override conflicts", "showforce"), "</td>";
+            "&nbsp;Override conflicts</label></td>";
 
     echo "<td class='padlb'>";
     if ($Me->privChair)

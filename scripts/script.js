@@ -6119,7 +6119,8 @@ function fold_override(checkbox) {
 plinfo.checkbox_change = function (event) {
     self || initialize();
     if (this.name.substring(0, 4) === "show") {
-        var type = this.name.substring(4);
+        // XXX backward compat
+        var type = this.name.substring(this.name.charAt(4) === ":" ? 5 : 4);
         if (type === "force")
             fold_override(this);
         else if (type === "rownum")

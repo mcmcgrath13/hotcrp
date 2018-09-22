@@ -234,6 +234,12 @@ class PaperList {
         }
         foreach ($this->search->viewmap ? : [] as $k => $v)
             $this->set_view($k, $v);
+        foreach ($qreq as $k => $v) {
+            if ($v && str_starts_with($k, "show:"))
+                $this->set_view(substr($k, 5), true);
+            else if ($v && str_starts_with($k, "hide:"))
+                $this->set_view(substr($k, 5), false);
+        }
         if ($this->conf->submission_blindness() != Conf::BLIND_OPTIONAL
             && get($this->_view_fields, "au")
             && get($this->_view_fields, "anonau") === null)
@@ -289,9 +295,13 @@ class PaperList {
         else {
             if ($k === "authors" || $k === "author")
                 $k = "au";
-            if ($v && in_array($k, ["aufull", "anonau"]) && !isset($this->_view_fields["au"]))
+            if ($v
+                && in_array($k, ["aufull", "anonau"])
+                && !isset($this->_view_fields["au"]))
                 $this->_view_fields["au"] = $v;
-            $this->_view_fields[$k] = $v;
+            if ($v !== "default"
+                || get($this->_view_fields, $k, true) === true)
+                $this->_view_fields[$k] = $v;
         }
     }
     private function set_view_display($str, $viewdisplay) {
@@ -777,7 +787,7 @@ class PaperList {
         foreach ($fields as $fid) {
             if (str_starts_with($fid, "+")) {
                 $fid = substr($fid, 1);
-                $this->set_view($fid, true);
+                $this->set_view($fid, "default");
             }
             foreach ($this->find_columns($fid) as $fdef)
                 $field_list[] = $fdef;
@@ -869,9 +879,7 @@ class PaperList {
             return !$this->_view_statistics;
         if ($fname === "authors" || $fname === "author")
             $fname = "au";
-        if (!$fname || $this->qreq["show$fname"])
-            return false;
-        return !get($this->_view_fields, $fname);
+        return $fname && !get($this->_view_fields, $fname);
     }
 
     private function _wrap_conflict($main_content, $override_content, PaperColumn $fdef) {
