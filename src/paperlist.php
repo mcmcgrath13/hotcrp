@@ -857,9 +857,11 @@ class PaperList {
 
     function is_folded($fdef) {
         $fname = $fdef;
-        if (is_object($fdef) || ($fdef = $this->find_column($fname)))
-            $fname = $fdef->fold ? $fdef->name : null;
-        else if ($fname === "force")
+        if (is_object($fdef) || ($fdef = $this->find_column($fname))) {
+            if ($fdef->fold === false)
+                return false;
+            $fname = $fdef->name;
+        } else if ($fname === "force")
             return !$this->_view_force;
         else if ($fname === "rownum")
             return !$this->_view_row_numbers;
@@ -1159,7 +1161,7 @@ class PaperList {
             $classes[] = "fold2" . ($this->is_folded("anonau") ? "c" : "o");
         // row number folding
         if ($has_sel)
-            $classes[] = "fold6" . ($this->_view_row_numbers ? "o" : "c");
+            $classes[] = "fold6" . ($this->is_folded("rownum") ? "c" : "o");
         if ($this->user->is_track_manager())
             $classes[] = "fold5" . ($this->_view_force ? "o" : "c");
         $classes[] = "fold7" . ($this->is_folded("statistics") ? "c" : "o");
@@ -1489,7 +1491,7 @@ class PaperList {
         foreach ($field_list as $fdef) {
             if ($fdef->viewable()) {
                 $fieldDef[$fdef->name] = $fdef;
-                if ($fdef->fold === true) {
+                if ($fdef->fold === null || $fdef->fold === true) {
                     $fdef->fold = $next_fold;
                     ++$next_fold;
                 }

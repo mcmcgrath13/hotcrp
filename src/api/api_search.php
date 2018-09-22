@@ -30,7 +30,7 @@ class Search_API {
         $fdef = $qreq->f ? $user->conf->paper_columns($qreq->f, $user) : null;
         if (count($fdef) > 1) {
             return new JsonResult(400, "“" . htmlspecialchars($qreq->f) . "” expands to more than one field.");
-        } else if (!$fdef || !isset($fdef[0]->fold) || !$fdef[0]->fold) {
+        } else if (empty($fdef)) {
             return new JsonResult(404, "No such field.");
         }
 

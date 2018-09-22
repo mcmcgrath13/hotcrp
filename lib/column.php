@@ -7,7 +7,7 @@ class Column {
     public $className;
     public $column = false;
     public $row = false;
-    public $fold = false;
+    public $fold;
     public $sort = false;
     public $completion = false;
     public $minimal = false;
