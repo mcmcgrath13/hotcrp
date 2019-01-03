@@ -107,6 +107,7 @@ class SelfHref {
             "g" => true,
             "q" => true, "t" => true, "qa" => true, "qo" => true, "qx" => true, "qt" => true,
             "fx" => true, "fy" => true,
+            "i" => true,
             "forceShow" => true, "ls" => true,
             "tab" => true, "atab" => true, "sort" => true,
             "group" => true, "monreq" => true, "noedit" => true,
@@ -114,7 +115,7 @@ class SelfHref {
             "editcomment" => true
         ];
     }
-    static function make(Qrequest $qreq = null, $params = [], $options = null) {
+    static function make(Qrequest $qreq = null, $params = null, $options = null) {
         global $Qreq;
         $qreq = $qreq ? : $Qreq;
         if (self::$argmap === null)
@@ -131,7 +132,7 @@ class SelfHref {
                 && !is_array($v))
                 $x[$ak] = $v;
         }
-        foreach ($params as $k => $v)
+        foreach ($params ? : [] as $k => $v)
             if ($v !== null)
                 $x[$k] = $v;
 

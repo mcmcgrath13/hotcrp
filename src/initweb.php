@@ -73,6 +73,45 @@ function initialize_user() {
     }
     ensure_session(ENSURE_SESSION_ALLOW_EMPTY);
 
+    // check "/u/" prefix and $_GET["i"]
+    $nav = Navigation::get();
+    if ($nav->shifted_path === ""
+        && isset($_GET["i"])
+        && isset($_SESSION["us"])
+        && $_SERVER["REQUEST_METHOD"] === "GET") {
+        $us = $_SESSION["us"];
+        for ($i = 0; $i < count($us); ++$i) {
+            if (strcasecmp($us[$i], $_GET["i"]) === 0) {
+                $suf = "";
+                if ($nav->page !== "index" || $nav->path !== "")
+                    $suf .= $nav->page . $nav->php_suffix . $nav->path;
+                $suf .= preg_replace_callback('/([?&;])i=[^&;#]*([&;]*)/', function ($m) {
+                        return $m[2] === "" ? "" : $m[1];
+                    }, $nav->query);
+                Navigation::redirect_base("u/$i/$suf");
+            }
+        }
+    }
+    if (isset($_SESSION["us"])
+        || ($nav->shifted_path !== "" && $nav->shifted_path !== "u/0/")) {
+        $i = 0;
+        if (substr($nav->shifted_path, 0, 2) === "u/")
+            $i = (int) substr($nav->shifted_path, 2);
+        $us = isset($_SESSION["us"]) ? $_SESSION["us"] : [];
+        if ($i < count($us)) {
+            if (strcasecmp($_SESSION["u"], $us[$i]) !== 0)
+                $_SESSION["u"] = $us[$i];
+        } else if ($_SERVER["REQUEST_METHOD"] === "GET") {
+            $suf = "";
+            if ($nav->page !== "index" || $nav->path !== "")
+                $suf .= $nav->page . $nav->php_suffix . $nav->path;
+            Navigation::redirect_base("u/0/{$suf}{$nav->query}");
+        } else {
+            header("HTTP/1.0 403 Permission Error");
+            exit;
+        }
+    }
+
     // load current user
     $Me = null;
     if (!isset($_SESSION["u"]) && isset($_SESSION["trueuser"]))
@@ -86,10 +125,9 @@ function initialize_user() {
 
     // redirect if disabled
     if ($Me->is_disabled()) {
-        if (Navigation::page() === "api")
+        if ($nav->page === "api")
             json_exit(["ok" => false, "error" => "Your account is disabled."]);
-        else if (Navigation::page() !== "index"
-                 && Navigation::page() !== "resetpassword")
+        else if ($nav->page !== "index" && $nav->page !== "resetpassword")
             Navigation::redirect_site(hoturl_site_relative("index"));
     }
 
