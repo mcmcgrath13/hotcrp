@@ -37,6 +37,7 @@ class Contact {
     public $phone;
     public $birthday;
     public $gender;
+    public $userSecret;
 
     private $password = "";
     private $passwordTime = 0;

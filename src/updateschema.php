@@ -1446,6 +1446,11 @@ set ordinal=(t.maxOrdinal+1) where commentId=$row[1]");
     if ($conf->sversion == 199
         && update_schema_missing_review_ordinals($conf))
         $conf->update_schema_version(200);
+    if ($conf->sversion == 200
+        && $conf->ql("alter table Paper add `paperSecret` varbinary(24) DEFAULT NULL")
+        && $conf->ql("alter table PaperReview add `reviewSecret` varbinary(24) DEFAULT NULL")
+        && $conf->ql("alter table ContactInfo add `userSecret` varbinary(24) DEFAULT NULL"))
+        $conf->update_schema_version(201);
 
     $conf->ql("delete from Settings where name='__schema_lock'");
     Conf::$g = $old_conf_g;

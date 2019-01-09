@@ -61,6 +61,7 @@ CREATE TABLE `ContactInfo` (
   `contactTags` varbinary(4096) DEFAULT NULL,
   `birthday` int(11) DEFAULT NULL,
   `gender` varbinary(24) DEFAULT NULL,
+  `userSecret` varbinary(24) DEFAULT NULL,
   `data` varbinary(32767) DEFAULT NULL,
   PRIMARY KEY (`contactId`),
   UNIQUE KEY `email` (`email`),
@@ -185,6 +186,7 @@ CREATE TABLE `Paper` (
   `pdfFormatStatus` bigint(11) NOT NULL DEFAULT '0',
   `withdrawReason` varbinary(1024) DEFAULT NULL,
   `paperFormat` tinyint(1) DEFAULT NULL,
+  `paperSecret` varbinary(24) DEFAULT NULL,
   PRIMARY KEY (`paperId`),
   KEY `timeSubmitted` (`timeSubmitted`),
   KEY `leadContactId` (`leadContactId`),
@@ -283,6 +285,7 @@ CREATE TABLE `PaperReview` (
   `reviewNeedsSubmit` tinyint(1) NOT NULL DEFAULT '1',
   `reviewWordCount` int(11) DEFAULT NULL,
   `reviewFormat` tinyint(1) DEFAULT NULL,
+  `reviewSecret` varbinary(24) DEFAULT NULL,
 
   `overAllMerit` tinyint(1) NOT NULL DEFAULT '0',
   `reviewerQualification` tinyint(1) NOT NULL DEFAULT '0',
@@ -499,7 +502,7 @@ CREATE TABLE `TopicInterest` (
 
 
 
-insert into Settings (name, value) values ('allowPaperOption', 200);
+insert into Settings (name, value) values ('allowPaperOption', 201);
 insert into Settings (name, value) values ('setupPhase', 1);
 -- there are no submissions yet
 insert into Settings (name, value) values ('no_papersub', 1);
