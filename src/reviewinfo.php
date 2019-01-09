@@ -28,6 +28,7 @@ class ReviewInfo {
     // ... scores ...
     //public $reviewWordCount;
     //public $reviewFormat;
+    //public $reviewSecret;
 
     static public $text_field_map = [
         "paperSummary" => "t01", "commentsToAuthor" => "t02",

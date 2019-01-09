@@ -11,6 +11,14 @@ class CapabilityManager {
         $this->prefix = $prefix;
     }
 
+    static function encode($s) {
+        return str_replace(["+", "/", "="], ["-a", "-b", ""], base64_encode($s));
+    }
+
+    static function decode($s) {
+        return base64_decode(str_replace(["-a", "-b"], ["+", "/"], $s));
+    }
+
     function create($capabilityType, $options = array()) {
         $contactId = get($options, "contactId", 0);
         if (!$contactId
@@ -33,15 +41,13 @@ class CapabilityManager {
 
         if (!$ok)
             return false;
-        return $this->prefix . "1"
-            . str_replace(["+", "/", "="], ["-a", "-b", ""], base64_encode($salt));
+        return $this->prefix . "1" . self::encode($salt);
     }
 
     function check($capabilityText) {
         if (substr($capabilityText, 0, strlen($this->prefix) + 1) !== $this->prefix . "1")
             return false;
-        $value = base64_decode(str_replace(["-a", "-b"], ["+", "/"],
-                                           substr($capabilityText, strlen($this->prefix) + 1)));
+        $value = self::decode(substr($capabilityText, strlen($this->prefix) + 1));
         if (strlen($value) >= 2
             && ($result = Dbl::ql($this->dblink, "select * from Capability where salt=?", $value))
             && ($row = Dbl::fetch_first_object($result))
@@ -59,7 +65,7 @@ class CapabilityManager {
 
 
 
-    static function capability_text($prow, $capType) {
+    static function encode_capability_v0($prow, $capType) {
         // A capability has the following representation (. is concatenation):
         //    capFormat . paperId . capType . hashPrefix
         // capFormat -- Character denoting format (currently 0).
@@ -89,16 +95,76 @@ class CapabilityManager {
         }
         $start = "0" . $prow->paperId . $capType;
         $hash = sha1($start . $prow->capVersion . $key, true);
-        $suffix = str_replace(array("+", "/", "="), array("-", "_", ""),
+        $suffix = str_replace(["+", "/", "="], ["-", "_", ""],
                               base64_encode(substr($hash, 0, 8)));
         return $start . $suffix;
     }
 
     static function apply_old_author_view(Contact $user, $uf, $isadd) {
         if (($prow = $user->conf->fetch_paper(["paperId" => $uf->match_data[1]]))
-            && ($uf->name === self::capability_text($prow, "a"))
+            && ($uf->name === self::encode_capability_v0($prow, "a"))
             && !$user->conf->opt("disableCapabilities"))
             $user->set_capability($prow->paperId, $isadd ? "av" : null);
+    }
+
+
+    static function set_secret($dblink, $table, $where, $secret_column) {
+        return Dbl::compare_and_swap($dblink,
+            "select $secret_column from $table where $where", [],
+            function ($value) {
+                return $value === null ? random_bytes(16) : $value;
+            },
+            "update $table set $secret_column=?{desired} where $where and $secret_column is null", []);
+    }
+
+    static function encode_capability_v1($type /* ... */) {
+        global $Now;
+        $pw = $sw = [];
+        foreach (func_get_args() as $i => $w) {
+            if ($i === 0) {
+                /* ignore */
+            } else if (is_string($w)) {
+                if (strpos($w, " ") !== false) {
+                    throw new Exception("argument contains space");
+                }
+                $pw[] = $w;
+            } else if (is_int($w)) {
+                $pw[] = $w;
+            } else if (is_array($w)) {
+                if ($w[0] === "now") {
+                    $pw[] = +strftime("%Y%j", $Now) - 2000000;
+                } else if ($w[0] === "secret" && is_string($w[1])) {
+                    $sw[] = $w[1];
+                } else {
+                    throw new Exception("unexpected argument");
+                }
+            } else if ($w instanceof PaperInfo) {
+                $pw[] = $w->paperId;
+                if ($w->paperSecret === null)
+                    $w->paperSecret = self::set_secret($w->conf->dblink, "Paper", "paperId={$w->paperId}", "paperSecret");
+                $sw[] = $w->paperSecret;
+            } else if ($w instanceof ReviewInfo) {
+                $pw[] = $w->reviewId;
+                if ($w->reviewSecret === null)
+                    $w->reviewSecret = self::set_secret($w->conf->dblink, "PaperReview", "paperId={$w->paperId} and reviewId={$w->reviewId}", "reviewSecret");
+                $sw[] = $w->reviewSecret;
+            } else if ($w instanceof Contact) {
+                if ($w->contactId <= 0) {
+                    throw new Exception("user argument has no id");
+                }
+                $pw[] = $w->contactId;
+                if ($w->userSecret === null)
+                    $w->userSecret = self::set_secret($w->conf->dblink, "ContactInfo", "contactId={$w->contactId}", "userSecret");
+                $sw[] = $w->userSecret;
+            } else {
+                throw new Exception("unexpected argument");
+            }
+        }
+        if (empty($sw)) {
+            throw new Exception("no secret key");
+        }
+        $pw[] = substr(hash_hmac("sha256", $type . "-" . join(" ", $pw), join($sw, ""), true), 0, 16);
+        return $type . "-" . self::encode(join(" ", $pw));
     }
 
 
