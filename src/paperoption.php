@@ -431,6 +431,7 @@ class PaperOption implements Abbreviator {
     const TOPICSID = -1005;
     const PCCONFID = -1006;
     const COLLABORATORSID = -1007;
+    const SUBMISSION_VERSION_ID = -1008;
 
     public $conf;
     public $id;
@@ -482,8 +483,7 @@ class PaperOption implements Abbreviator {
         "slides" => "+DocumentPaperOption",
         "video" => "+DocumentPaperOption",
         "document" => "+DocumentPaperOption",
-        "attachments" => "+AttachmentsPaperOption",
-        "intrinsic" => "+IntrinsicPaperOption"
+        "attachments" => "+AttachmentsPaperOption"
     ];
 
     function __construct(Conf $conf, $args) {
@@ -587,21 +587,24 @@ class PaperOption implements Abbreviator {
     }
 
     static function make($args, $conf) {
-        if (is_object($args)) {
-            $args = get_object_vars($args);
+        assert(is_object($args));
+        if (is_object($args) && isset($args->require)) {
+            Conf::xt_resolve_require($args);
         }
-        $callback = get($args, "callback");
-        if (!$callback) {
-            $callback = get(self::$callback_map, get($args, "type"));
+        $callback = null;
+        if (isset($args->callback)) {
+            $callback = $args->callback;
+        } else if (isset($args->type)) {
+            $callback = get(self::$callback_map, $args->type);
         }
         if (!$callback) {
             $callback = "+UnknownPaperOption";
         }
         if ($callback[0] === "+") {
             $class = substr($callback, 1);
-            return new $class($conf, $args);
+            return new $class($conf, (array) $args);
         } else {
-            return call_user_func($callback, $conf, $args);
+            return call_user_func($callback, $conf, (array) $args);
         }
     }
 
@@ -1255,6 +1258,15 @@ class DocumentPaperOption extends PaperOption {
         }
     }
 
+    function value_messages(PaperValue $ov, MessageSet $ms) {
+        if ($this->id == DTYPE_SUBMISSION
+            && !$this->conf->opt("noPapers")
+            && !$this->value_present($ov)) {
+            $ms->warning_at($this->field_key(), $this->conf->_("Entry required to complete submission."));
+        }
+        // XXX final submission notices
+    }
+
     function parse_web(PaperInfo $prow, Qrequest $qreq) {
         if ($qreq->has_file($this->formid)) {
             $ov = PaperValue::make($prow, $this, -1);
@@ -1743,70 +1755,6 @@ class AttachmentsPaperOption extends PaperOption {
             }
         } else if ($fr->verbose()) {
             $fr->set_text("None");
-        }
-    }
-}
-
-class IntrinsicPaperOption extends PaperOption {
-    function __construct(Conf $conf, $args) {
-        parent::__construct($conf, $args);
-    }
-
-    function value_present(PaperValue $ov) {
-        if ($this->id >= DTYPE_FINAL) {
-            return $ov->value > 1;
-        } else {
-            return !!$ov->value;
-        }
-    }
-    function value_messages(PaperValue $ov, MessageSet $ms) {
-        IntrinsicValue::value_messages($this, $ov, $ms);
-    }
-    function assign_force(PaperValue $ov) {
-        $s = null;
-        if ($this->id === PaperOption::TITLEID) {
-            $s = $ov->prow->title;
-        } else if ($this->id === PaperOption::ABSTRACTID) {
-            $s = $ov->prow->abstract;
-        } else if ($this->id === PaperOption::COLLABORATORSID) {
-            $s = $ov->prow->collaborators;
-        } else {
-            IntrinsicValue::assign_intrinsic($ov);
-            return;
-        }
-        if ($s !== null && $s !== "") {
-            $ov->set_value_data([1], [$s]);
-        }
-    }
-    function parse_web(PaperInfo $prow, Qrequest $qreq) {
-        return IntrinsicValue::parse_web($this, $prow, $qreq);
-    }
-    function echo_web_edit(PaperTable $pt, $ov, $reqov) {
-        IntrinsicValue::echo_web_edit($this, $pt, $ov, $reqov);
-    }
-    function render(FieldRender $fr, PaperValue $ov) {
-        if ($this->id === PaperOption::TITLEID) {
-            $fr->value = $ov->prow->title ? : "[No title]";
-            $fr->value_format = $ov->prow->title_format();
-        } if ($this->id === PaperOption::ABSTRACTID) {
-            if ($fr->for_page()) {
-                $fr->table->render_abstract($fr, $this);
-            } else {
-                $text = $ov->prow->abstract;
-                if (trim($text) !== "") {
-                    $fr->value = $text;
-                    $fr->value_format = $ov->prow->abstract_format();
-                } else if (!$this->conf->opt("noAbstract")
-                           && $fr->verbose()) {
-                    $fr->set_text("[No abstract]");
-                }
-            }
-        } else if ($this->id === PaperOption::AUTHORSID) {
-            $fr->table->render_authors($fr, $this);
-        } else if ($this->id === -1005) {
-            $fr->table->render_topics($fr, $this);
-        } else if ($this->id === -1008) {
-            $fr->table->render_submission_version($fr, $this);
         }
     }
 }
