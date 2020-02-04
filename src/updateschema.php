@@ -1640,6 +1640,47 @@ set ordinal=(t.maxOrdinal+1) where commentId=$row[1]");
             $conf->update_schema_version(226);
         }
     }
+    if ($conf->sversion == 226
+        && $conf->ql("lock tables ContactInfo write")) {
+        $conf->ql("DROP TABLE IF EXISTS `ContactAuthenticator`")
+        if ($conf->ql("CREATE TABLE `ContactAuthenticator` (
+  `contactId` int(11) NOT NULL,
+  `authType` int(11) NOT NULL,
+  `authCreatedAt` bigint(11) NOT NULL,
+  `authUsedAt` bigint(11) DEFAULT NULL,
+  `authFailedAt` bigint(11) DEFAULT NULL,
+  `authUsableAt` bigint(11) DEFAULT NULL,
+  `authFailedCount` int(11) NOT NULL DEFAULT '0',
+  `authString` varbinary(1024) DEFAULT NULL,
+  `authData` varbinary(32768) DEFAULT NULL,
+  PRIMARY KEY (`contactId`,`authType`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8")) {
+            $result = $conf->ql("select contactId, password, passwordTime, passwordUseTime from ContactInfo where password!='' and password!='*'");
+            $cleanf = Dbl::make_multi_ql_stager($conf->dblink);
+            while (($row = $result->fetch_object())) {
+                if (str_starts_with($row->password, ' $')) {
+                    $authtype = 1;
+                    $authstr = substr($row->password, 2);
+                } else if (str_starts_with($row->password, ' ')) {
+                    $authtype = 2;
+                    $authstr = substr($row->password, 1);
+                } else {
+                    $authtype = 0;
+                    $authstr = $row->password;
+                }
+                $cleanf("insert into ContactAuthenticator set contactId=?, authType=?")
+            }
+            Dbl::free($result);
+            $cleanf(true);
+            $ok = true;
+        } else {
+            $ok = false;
+        }
+        $conf->ql("unlock tables");
+        if ($ok) {
+            $conf->update_schema_version(227);
+        }
+    }
 
     $conf->ql("delete from Settings where name='__schema_lock'");
     Conf::$g = $old_conf_g;

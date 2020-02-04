@@ -124,7 +124,7 @@ class LoginHelper {
         }
 
         // if no user found, then fail
-        if (!$user && (!$cdb_user || !$cdb_user->allow_contactdb_password())) {
+        if (!$user && (!$cdb_user || !$cdb_user->password_auth())) {
             Ht::error_at("email", "No account for " . htmlspecialchars($qreq->email) . ". Did you enter the correct email address?");
             return false;
         }
@@ -171,7 +171,7 @@ class LoginHelper {
                 if ($xuser->password_is_reset()) {
                     $error = "Your previous password has been reset. Use “Forgot your password?” to create a new password.";
                 } else if (get($info, "local_obsolete")) {
-                    $error = "The password you entered has been superseded by a more recent " . $conf->opt("contactdb_description", "global") . " password. Enter the more recent password to sign in, or use “Forgot your password?”.";
+                    $error = "The password you entered has been superseded by a more recent " . $conf->opt("contactdb_description", "global") . " password. Enter the more recent password to sign in, or use “Forgot your password?” to reset it.";
                     error_log($conf->dbname . ": " . $xuser->email . ": preventing login using obsolete local password (" . post_value(true) . ")");
                 } else {
                     $error = "Incorrect password.";
@@ -286,8 +286,8 @@ class LoginHelper {
             Ht::error_at("email", "An account already exists for " . htmlspecialchars($qreq->email) . ". Enter your password or select “Forgot your password?” to reset it.");
             return false;
         } else if ($cdb_user
-                   && $cdb_user->allow_contactdb_password()
-                   && $cdb_user->password_used()) {
+                   && ($auth = $cdb_user->password_auth())
+                   && $auth->authUsedAt) {
             $desc = $conf->opt("contactdb_description") ? : "HotCRP";
             Ht::error_at("email", "An account already exists for " . htmlspecialchars($qreq->email) . " on $desc. Sign in using your $desc password or select “Forgot your password?” to reset it.");
             return false;

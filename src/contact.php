@@ -45,6 +45,7 @@ class Contact {
     private $passwordTime = 0;
     private $passwordUseTime = 0;
     private $_contactdb_user = false;
+    private $_auth;
 
     private $_disabled;
     public $activity_at = false;
@@ -1400,29 +1401,63 @@ class Contact {
         return hotcrp_random_password($length);
     }
 
+    private function auth() {
+        if ($this->_auth === null) {
+            $id = $this->contactId ? : $this->contactDbId;
+            if ($id) {
+                $dbl = $this->contactId ? $this->conf->dblink : $this->conf->contactdb();
+                $this->_auth = Dbl::fetch_objects($dbl, "select * from ContactAuthenticator where contactId=?", $id);
+            } else {
+                $this->_auth = [];
+            }
+        }
+        return $this->_auth;
+    }
+
+    private function auth_class($lo, $hi) {
+        foreach ($this->auth() as $a) {
+            if ($a->authType >= $lo && $a->authType < $hi) {
+                return $a;
+            }
+        }
+        return null;
+    }
+
+    private function auth_type($t) {
+        foreach ($this->auth() as $a) {
+            if ($a->authType == $t) {
+                return $a;
+            }
+        }
+        return null;
+    }
+
+    function password_auth() {
+        return $this->auth_class(0, 99);
+    }
+
     function allow_contactdb_password() {
         $cdbu = $this->contactdb_user();
-        return $cdbu && $cdbu->password && $cdbu->password !== "*";
+        return $cdbu && $cdbu->auth_class(0, 99);
     }
 
     function plaintext_password() {
         // Return the currently active plaintext password. This might not
         // equal $this->password because of the cdb.
-        if ($this->password === "" || $this->password === "*") {
-            if ($this->contactId
-                && ($cdbu = $this->contactdb_user()))
-                return $cdbu->plaintext_password();
-            else
-                return false;
-        } else if ($this->password[0] === " " || $this->password === "*") {
-            return false;
-        } else {
-            return $this->password;
+        $a = $this->auth_type(0);
+        if (!$a
+            && $this->contactId
+            && ($cdbu = $this->contactdb_user())) {
+            $a = $cdbu->auth_type(0);
         }
+        return $a ? $a->authString : false;
     }
 
     function password_is_reset() {
+        XXXXXXX
         if (($cdbu = $this->contactdb_user())) {
+            return !$cdbu->auth_class(0, 99)
+                && (!$this->auth_class(0, 99))
             return (string) $cdbu->password === ""
                 && ((string) $this->password === ""
                     || $this->passwordTime < $cdbu->passwordTime);
@@ -1431,20 +1466,19 @@ class Contact {
         }
     }
 
-    function password_used() {
-        return $this->passwordUseTime > 0;
-    }
-
 
     // obsolete
     private function password_hmac_key($keyid) {
-        if ($keyid === null)
+        if ($keyid === null) {
             $keyid = $this->conf->opt("passwordHmacKeyid", 0);
+        }
         $key = $this->conf->opt("passwordHmacKey.$keyid");
-        if (!$key && $keyid == 0)
+        if (!$key && $keyid == 0) {
             $key = $this->conf->opt("passwordHmacKey");
-        if (!$key) /* backwards compatibility */
+        }
+        if (!$key) { /* backwards compatibility */
             $key = $this->conf->setting_data("passwordHmacKey.$keyid");
+        }
         if (!$key) {
             error_log("missing passwordHmacKey.$keyid, using default");
             $key = "NdHHynw6JwtfSZyG3NYPTSpgPFG8UN8NeXp4tduTk2JhnSVy";
@@ -1452,29 +1486,30 @@ class Contact {
         return $key;
     }
 
-    private function check_hashed_password($input, $pwhash) {
+    private function check_password_auth($auth, $input) {
         if ($input == ""
             || $input === "*"
-            || (string) $pwhash === ""
-            || $pwhash === "*")
+            || !$auth) {
             return false;
-        else if ($pwhash[0] !== " ")
-            return $pwhash === $input;
-        else if ($pwhash[1] === "\$")
-            return password_verify($input, substr($pwhash, 2));
-        else {
-            if (($method_pos = strpos($pwhash, " ", 1)) !== false
-                && ($keyid_pos = strpos($pwhash, " ", $method_pos + 1)) !== false
-                && strlen($pwhash) > $keyid_pos + 17
-                && function_exists("hash_hmac")) {
-                $method = substr($pwhash, 1, $method_pos - 1);
-                $keyid = substr($pwhash, $method_pos + 1, $keyid_pos - $method_pos - 1);
-                $salt = substr($pwhash, $keyid_pos + 1, 16);
+        } else if ($auth->authType == 0) {
+            return $auth->authString === $input;
+        } else if ($auth->authType == 1) {
+            return password_verify($input, $auth->authString);
+        } else if ($auth->authType == 2) {
+            if (($method_pos = strpos($auth->authString, " ")) !== false
+                && ($keyid_pos = strpos($auth->authString, " ", $method_pos + 1)) !== false
+                && strlen($auth->authString) > $keyid_pos + 17) {
+                $method = substr($auth->authString, 0, $method_pos);
+                $keyid = substr($auth->authString, $method_pos + 1, $keyid_pos - $method_pos - 1);
+                $salt = substr($auth->authString, $keyid_pos + 1, 16);
                 return hash_hmac($method, $salt . $input, $this->password_hmac_key($keyid), true)
-                    == substr($pwhash, $keyid_pos + 17);
+                    === substr($auth->authString, $keyid_pos + 17);
+            } else {
+                return false;
             }
+        } else {
+            return false;
         }
-        return false;
     }
 
     private function password_hash_method() {
@@ -1482,27 +1517,15 @@ class Contact {
         return is_int($m) ? $m : PASSWORD_DEFAULT;
     }
 
-    private function check_password_encryption($hash, $iscdb) {
-        if ($iscdb)
-            $safe = $this->conf->opt("contactdb_safePasswords", 2);
-        else
-            $safe = $this->conf->opt("safePasswords");
-        if ($safe < 1
-            || ($method = $this->password_hash_method()) === false
-            || ($hash !== "" && $hash[0] !== " " && $safe == 1))
-            return false;
-        else if ($hash === "" || $hash[0] !== " ")
-            return true;
-        else
-            return $hash[1] !== "\$"
-                || password_needs_rehash(substr($hash, 2), $method);
+    private function update_password_auth($auth) {
+        // ignore safePasswords: default safe
+        return !$auth
+            || $auth->authType != 1
+            || password_needs_rehash($auth->authString, $this->password_hash_method());
     }
 
     private function hash_password($input) {
-        if (($method = $this->password_hash_method()) !== false)
-            return " \$" . password_hash($input, $method);
-        else
-            return $input;
+        return password_hash($input, $this->password_hash_method());
     }
 
     function check_password($input, $info = null) {
@@ -1510,26 +1533,54 @@ class Contact {
         assert(!$this->conf->external_login());
         if (($this->contactId && $this->is_disabled())
             || !self::valid_password($input)) {
-            if ($info)
+            if ($info) {
                 $info->disabled = true;
+            }
             return false;
         }
 
         $cdbu = $this->contactdb_user();
-        $cdbok = $cdbu
-            && $cdbu->password
-            && $cdbu->allow_contactdb_password()
+        $cdbauth = $cdbu ? $cdbu->password_auth() : null;
+        $cdbok = $cdbuauth
             // NB $this is OK here, password hash passed in
-            && $this->check_hashed_password($input, $cdbu->password);
-        $localok = $this->contactId > 0
-            && $this->password
-            && $this->check_hashed_password($input, $this->password);
+            && $this->check_password_auth($cdbauth, $input);
+        $localauth = $this->contactId > 0 ? $this->password_auth() : null;
+        $localok = $localauth
+            && $this->check_password_auth($localauth, $input);
 
         if ($cdbok
-            || ($localok && $cdbu && !$cdbu->password)) {
+            || ($localok && $cdbu && !$cdbauth)) {
+            // update CDB authenticators
+            $qx = ["authUsedAt" => $Now];
+            if (!$cdbauth || $this->update_password_auth($cdbauth)) {
+                $qx["authType"] = 1;
+                $qx["authString"] = $this->hash_password($input);
+            }
+            if (!$cdbauth && $localauth->authCreatedAt) {
+                $qx["authCreatedAt"] = $localauth->authCreatedAt;
+            } else if (!$cdbauth || !$cdbauth->authCreatedAt) {
+                $qx["authCreatedAt"] = $Now;
+            }
+            if ($cdbauth) {
+                Dbl::qe_apply($this->conf->contactdb(), "update ContactAuthenticator set " . join("=?, ", array_keys($qx)) . "=? where contactId=? and authType>=0 and authType<100", array_merge(array_values($qx), [$cdbu->contactDbId]));
+            } else {
+                $qx["contactId"] = $cdbu->contactDbId;
+                Dbl::qe_apply($this->conf->contactdb(), "insert into ContactAuthenticator set " . join("=?, ", array_keys($qx)) . "=?", array_values($qx));
+            }
+            $cdbu->_auth = null;
+            // remove local authenticator
+
+            //
+                    $qf[] = "authType";
+                    $qv[] = 1;
+                    $qf[] = "authString";
+                    $qv[] = $this->hash_password($input);
+                }
+            }
+
             $updater = ["passwordUseTime" => $Now];
             if ($cdbok) {
-                if ($this->check_password_encryption($cdbu->password, true)) {
+                if ($this->update_password_auth($cdbauth)) {
                     $updater["password"] = $this->hash_password($input);
                 }
                 if (!$cdbu->passwordTime) {
@@ -1605,19 +1656,22 @@ class Contact {
             return false;
 
         $plaintext = $new === null;
-        if ($plaintext)
+        if ($plaintext) {
             $new = self::random_password();
+        }
         assert(self::valid_password($new));
 
         $hash = $new;
-        if ($hash && !$plaintext && $this->check_password_encryption("", !!$cdbu))
+        if ($hash && !$plaintext && $this->check_password_encryption("", !!$cdbu)) {
             $hash = $this->hash_password($hash);
+        }
 
         $use_time = $plaintext ? 0 : $Now;
         if ($cdbu) {
             $cdbu->apply_updater(["passwordUseTime" => $use_time, "password" => $hash, "passwordTime" => $Now], true);
-            if ($this->contactId && $this->password)
+            if ($this->contactId && $this->password) {
                 $this->apply_updater(["passwordUseTime" => $use_time, "password" => "", "passwordTime" => $Now], false);
+            }
         } else if ($this->contactId) {
             $this->apply_updater(["passwordUseTime" => $use_time, "password" => $hash, "passwordTime" => $Now], false);
         }

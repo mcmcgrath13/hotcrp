@@ -42,7 +42,7 @@ function change_email_by_capability($Qreq) {
         if ($newcdbu->disabled) {
             Conf::msg_error("changeemail", "That user is globally disabled.");
             return false;
-        } else if ($newcdbu->allow_contactdb_password()
+        } else if ($newcdbu->password_auth()
                    && $Qreq->go
                    && $Qreq->post_ok()) {
             $Qreq->password = trim((string) $Qreq->password);
@@ -89,7 +89,7 @@ function change_email_by_capability($Qreq) {
         echo '<div class="', Ht::control_class("changeemail", "f-i"), '"><label for="changeemail">Change code</label>',
             Ht::entry("changeemail", $Qreq->changeemail == "1" ? "" : $Qreq->changeemail, ["id" => "changeemail", "class" => "fullw", "autocomplete" => "one-time-code"]),
             Ht::render_messages_at("changeemail"), '</div>';
-        if ($newcdbu && $newcdbu->allow_contactdb_password()) {
+        if ($newcdbu && $newcdbu->password_auth()) {
             echo '<div class="', Ht::control_class("password", "f-i"), '"><label for="password">Password for ', htmlspecialchars($newemail), '</label>',
             Ht::password("password", "", ["autocomplete" => "password", "class" => "fullw"]),
             Ht::render_messages_at("password"), '</div>';
