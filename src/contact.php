@@ -1569,6 +1569,16 @@ class Contact {
             }
             $cdbu->_auth = null;
             // remove local authenticator
+            if ($localauth) {
+                $this->conf->qe("delete from ContactAuthenticator where contactId=? and authType>=0 and authType<100", $this->contactId);
+                $this->_auth = null;
+            }
+            if ($info) {
+                $info->cdb = true;
+            }
+            $cdbok = true;
+            $localok = false;
+        }
 
             //
                     $qf[] = "authType";
