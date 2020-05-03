@@ -43,8 +43,8 @@ class Conflict_PaperColumn extends PaperColumn {
         }
     }
     function compare(PaperInfo $a, PaperInfo $b, ListSorter $sorter) {
-        $act = $this->conflict_type($sorter->pl, $a);
-        $bct = $this->conflict_type($sorter->pl, $b);
+        $act = $this->conflict_type($sorter->pl, $a) & ~1;
+        $bct = $this->conflict_type($sorter->pl, $b) & ~1;
         if ($this->show_description) {
             return $bct - $act;
         } else {
@@ -73,7 +73,7 @@ class Conflict_PaperColumn extends PaperColumn {
             return $t;
         }
         $ct = $this->conflict_type($pl, $row);
-        if (!$ct) {
+        if (!Conflict::is_conflicted($ct)) {
             return "";
         } else if (!$this->show_description || $ct == 1) {
             return review_type_icon(-1);
@@ -92,7 +92,8 @@ class Conflict_PaperColumn extends PaperColumn {
         $t = '<input type="checkbox" class="uic uikd uich js-assign-review js-range-click" '
             . 'data-range-type="assrevu' . $this->contact->contactId
             . '" name="assrev' . $row->paperId . 'u' . $this->contact->contactId
-            . '" value="-1" autocomplete="off"' . ($ct ? " checked" : "");
+            . '" value="-1" autocomplete="off"'
+            . (Conflict::is_conflicted($ct) ? " checked" : "");
         if ($this->show_user) {
             $t .= ' title="' . $pl->user->name_text_for($this->contact) . ' conflict"';
         }
@@ -100,13 +101,9 @@ class Conflict_PaperColumn extends PaperColumn {
     }
     function text(PaperList $pl, PaperInfo $row) {
         $ct = $this->conflict_type($pl, $row);
-        if (!$ct) {
-            return "N";
-        } else if (!$this->show_description || $ct == 1) {
-            return "Y";
-        } else {
-            return $pl->conf->conflict_types()->unparse_text(min($ct, CONFLICT_AUTHOR));
-        }
+        return Conflict::is_conflicted($ct)
+            ? $pl->conf->conflict_types()->unparse_csv(min($ct, CONFLICT_AUTHOR))
+            : "N";
     }
 
     static function expand($name, $user, $xfj, $m) {

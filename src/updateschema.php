@@ -1677,6 +1677,10 @@ set ordinal=(t.maxOrdinal+1) where commentId=$row[1]");
         && $conf->ql("alter table Paper add `dataOverflow` longblob")) {
         $conf->update_schema_version(231);
     }
+    if ($conf->sversion == 231
+        && $conf->ql("update PaperConflict set conflictType=case conflictType when 1 then 2 when 2 then 2 when 3 then 4 when 4 then 6 when 5 then 8 when 6 then 10 when 8 then 3 when 64 then 64 when 65 then 65 else conflictType end")) {
+        $conf->update_schema_version(232);
+    }
 
     $conf->ql("delete from Settings where name='__schema_lock'");
     Conf::$g = $old_conf_g;

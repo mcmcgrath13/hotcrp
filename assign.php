@@ -488,13 +488,13 @@ if ($Me->can_administer($prow)) {
         // first, name and assignment
         $conflict_type = $prow->conflict_type($pc);
         $rrow = $prow->review_of_user($pc);
-        if ($conflict_type >= CONFLICT_AUTHOR) {
+        if (Conflict::is_author($conflict_type)) {
             $revtype = -2;
         } else {
             $revtype = $rrow ? $rrow->reviewType : 0;
         }
         $crevtype = $revtype;
-        if ($crevtype == 0 && $conflict_type > 0) {
+        if ($crevtype == 0 && Conflict::is_conflicted($conflict_type)) {
             $crevtype = -1;
         }
         $pcconfmatch = null;

@@ -478,7 +478,7 @@ xassert(!$ps->has_problem()); // XXX should have problem
 $nprow1->invalidate_conflicts();
 xassert_eqq(pc_conflict_keys($nprow1), [$user_estrin->contactId, $user_varghese->contactId], true);
 xassert_eqq($nprow1->conflict_type($user_estrin), CONFLICT_CONTACTAUTHOR);
-xassert_eqq($nprow1->conflict_type($user_varghese), 3);
+xassert_eqq($nprow1->conflict_type($user_varghese), 4);
 
 // check some content_text_signature functionality
 $doc = new DocumentInfo(["content" => "ABCdefGHIjklMNO"], $Conf);

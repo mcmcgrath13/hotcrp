@@ -808,18 +808,19 @@ xassert_assign($user_sclin, "paper,action,user,conflicttype\n3,conflict,rguerin@
 $paper3->load_conflicts(false);
 xassert_eqq($paper3->conflict_type($user_rguerin), Conflict::GENERAL);
 
+$confset = $Conf->conflict_types();
 xassert_assign($user_sclin, "paper,action,user,conflict\n3,conflict,rguerin@ibm.com,collaborator\n");
 $paper3->load_conflicts(false);
 xassert_eqq($paper3->conflict_type($user_rguerin), 2);
 xassert_assign($user_sclin, "paper,action,user,conflict\n3,conflict,rguerin@ibm.com,advisor\n");
 $paper3->load_conflicts(false);
-xassert_eqq($paper3->conflict_type($user_rguerin), 3);
+xassert_eqq($paper3->conflict_type($user_rguerin), 4);
 xassert_assign($user_sclin, "paper,action,user,conflict\n3,conflict,rguerin@ibm.com,advisee\n");
 $paper3->load_conflicts(false);
-xassert_eqq($paper3->conflict_type($user_rguerin), 3);
+xassert_eqq($paper3->conflict_type($user_rguerin), 4);
 xassert_assign($user_sclin, "paper,action,user,conflict\n3,conflict,rguerin,collaborator:none\n");
 $paper3->load_conflicts(false);
-xassert_eqq($paper3->conflict_type($user_rguerin), 3);
+xassert_eqq($paper3->conflict_type($user_rguerin), 4);
 xassert_assign($user_sclin, "paper,action,user,conflict\n3,conflict,any,advisee:collaborator\n");
 $paper3->load_conflicts(false);
 xassert_eqq($paper3->conflict_type($user_rguerin), 2);

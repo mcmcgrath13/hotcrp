@@ -3169,7 +3169,7 @@ handle_ui.on("js-assignment-fold", function (event) {
         if (!$x.length) {
             var name = $a.attr("data-pid") + "u" + $a.attr("data-uid"),
                 revtype = +$a.attr("data-review-type"),
-                conftype = +$a.attr("data-conflict-type"),
+                conftype = $a.attr("data-conflicted"),
                 revinprogress = $a[0].hasAttribute("data-review-in-progress");
             $x = $('<div class="has-assignment-ui fold2' + (revtype > 0 ? "o" : "c") + '">'
                 + '<div class="assignment-ui-options">'
