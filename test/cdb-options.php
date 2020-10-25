@@ -2,9 +2,10 @@
 // test/cdb-options.php -- HotCRP conference options for test databases
 
 global $Opt;
-$Opt["dbName"] = "hotcrp_testdb_cdb";
-$Opt["dbUser"] = "hotcrp_testdb";
-$Opt["dbPassword"] = "m5LuaN23j26g";
+$Opt["dbName"] = "hotcrp_testdb";
+$Opt["dbUser"] = "test_user";
+$Opt["dbPassword"] = "example";
+$Opt["dbHost"] = "db";
 $Opt["shortName"] = "Testconf I";
 $Opt["longName"] = "Test Conference I";
 $Opt["passwordHmacKey"] = "W9dY7CVZPA2fFdVjNSVD66gMTbazagzHkm8ygL5uyxZnWA55";
