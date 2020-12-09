@@ -33,7 +33,8 @@
     ],
     "submission": {"content": "%PDF-whatever"},
     "submitted": true,
-    "options": {"calories": 1020}
+    "options": {"calories": 1020},
+    "contacts": ["shenker@parc.xerox.com", "ojuelegba@gmail.com"]
 },
 {
     "_id_": 2,
@@ -392,7 +393,7 @@
     "1,primary,mgbaker@cs.stanford.edu",
     "1,primary,mjh@isi.edu",
     "1,primary,varghese@ccrc.wustl.edu",
-    "2,primary,chair@_.com",
+    "2,primary,chair@chair.com",
     "2,primary,jon@cs.ucl.ac.uk",
     "2,primary,pdruschel@cs.rice.edu",
     "3,primary,mjh@isi.edu",
@@ -425,7 +426,7 @@
     "12,primary,christophe.diot@sophia.inria.fr,R1",
     "12,primary,peter.danzig@usc.edu,R3",
     "12,primary,pfrancis@ntt.jp,R1",
-    "13,primary,chair@_.com,R1",
+    "13,primary,chair@chair.com,R1",
     "13,primary,huitema@bellcore.com,R1",
     "13,primary,mgbaker@cs.stanford.edu,R2",
     "14,primary,mjh@isi.edu",
@@ -434,7 +435,7 @@
     "15,primary,floyd@ee.lbl.gov",
     "15,primary,jon@cs.ucl.ac.uk",
     "15,primary,shenker@parc.xerox.com",
-    "16,primary,chair@_.com",
+    "16,primary,chair@chair.com",
     "16,primary,floyd@ee.lbl.gov",
     "16,primary,jon@cs.ucl.ac.uk",
     "17,primary,lixia@cs.ucla.edu,R1",

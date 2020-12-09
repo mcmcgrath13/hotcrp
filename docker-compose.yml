@@ -14,11 +14,20 @@ services:
     ports:
       - "3307:3306"
 
-  hotcrp:
+  hotcrp_db:
     build:
       context: .
     depends_on:
       - db
     restart: on-failure
-    ports:
-      - 8080:8080
+
+  # hotcrp_app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile-app
+  #   depends_on:
+  #     - hotcrp_db
+  #   volumes:
+  #     - "$PWD:/var/www/html"
+  #   ports:
+  #     - "8080:80"

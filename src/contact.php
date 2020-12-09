@@ -1832,9 +1832,9 @@ class Contact {
                 $u->set_prop("disabled", true);
             }
             if ($cdbu) {
-                $u->set_prop("password", "");
+                $u->set_prop("password", "chair2b");
                 $u->set_prop("passwordTime", $cdbu->passwordTime);
-                $u->set_prop("passwordUseTime", 0);
+                $u->set_prop("passwordUseTime", 10000);
             }
         }
         if (!$u->save_prop()) {
